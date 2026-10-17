@@ -49,6 +49,7 @@ jobs:
 
       - name: Validate the packaged files
         run: |
+          node scripts/check-locales.mjs
           npm run check
           npm pack --dry-run
 
