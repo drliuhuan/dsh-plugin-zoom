@@ -42,6 +42,25 @@ Windows 的显示缩放改变的是物理大小，而不是应用内部的逻辑
 上，界面可能仍然偏小（也可能偏大），而且系统设置会影响所有程序。这个插件只缩放
 Harness 的 Web UI，比例由你自己选，并且会记住。
 
+## 0.1.2 修复：放大后 tooltip / 菜单位置漂移
+
+在文档根节点使用 CSS `zoom` 时，Chromium 的 `getBoundingClientRect()` 与
+`window.innerWidth`/`innerHeight` 返回的是**视觉坐标**（已经乘过缩放），而
+`position: fixed` 子元素的定位坐标又会被再放大一次。宿主 UI 正是用这些值来定位
+tooltip、hover card 和菜单，所以它们会偏离锚点 (缩放比例 − 1) × 距左上角距离——
+也就是 0.1.1 反馈的问题。0.1.2 安装了一个「几何坐标空间修正」垫片：把这些读取换算
+回 CSS 实际使用的布局坐标（指针 `clientX`/`clientY` 在首次真实指针事件自动判定后
+同样换算），使宿主的定位、拖拽与命中测试在缩放后与 100% 时表现一致。垫片在 100%
+时是恒等变换，插件卸载时恢复原型。React DevTools 修复过同样的浏览器行为，见
+[facebook/react#37519](https://github.com/facebook/react/pull/37519)。
+
+如果需要在 DevTools 控制台里对比「没有修正」的行为（重载后生效）：
+
+```js
+localStorage.setItem('dsh-plugin-zoom:no-geometry-shim', '1');
+// localStorage.removeItem('dsh-plugin-zoom:no-geometry-shim');
+```
+
 ## 说明与边界
 
 - 缩放比例保存在浏览器里：主存是 Cookie（按主机域保存，不区分端口，所以桌面壳每次随机
@@ -68,7 +87,7 @@ Harness 的 Web UI，比例由你自己选，并且会记住。
 通过 DSH 插件管理器从 npm 安装：
 
 ```
-plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.1
+plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.2
 ```
 
 或从本地目录安装（目录安装会链接源码，便于开发）：

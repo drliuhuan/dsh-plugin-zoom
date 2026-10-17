@@ -285,6 +285,181 @@
 
   //#endregion
 
+  //#region geometry space shim ----------------------------------------------
+
+  /**
+   * Under a CSS `zoom` on the document root, Chromium reports two different
+   * coordinate spaces for the same DOM:
+   *
+   *  - CSS lengths (`left`, `width`, …) and layout metrics (`offsetWidth`,
+   *    `scrollTop`, `body.clientWidth`, …) are in layout pixels; the renderer
+   *    multiplies them by the zoom for display;
+   *  - `getBoundingClientRect()`, `elementFromPoint()` and
+   *    `window.innerWidth`/`innerHeight` are reported in visual pixels
+   *    (layout × zoom).
+   *
+   * The host UI sizes and places its `position: fixed` tooltips, hover cards
+   * and menus from a rect it just measured, so under a zoom the rect is already
+   * visual while the fixed offset is zoomed a second time — the tooltip/menu
+   * drifts by (scale − 1) × distance from the top-left corner. React DevTools
+   * fixed the same browser behavior in facebook/react#37519.
+   *
+   * This shim makes the JS-visible geometry match the layout space that CSS
+   * uses, so the host UI's own math runs exactly as it does at 100 %:
+   *  - `getBoundingClientRect` divides by the zoom;
+   *  - `window.innerWidth`/`innerHeight` divide by the zoom;
+   *  - pointer `clientX`/`clientY` divide by the zoom, but only after the first
+   *    real pointer event has confirmed (by comparing the event target's native
+   *    and shimmed rects) that Chromium reports them in visual pixels — a
+   *    detection that keeps the shim correct if that mapping ever changes.
+   * Every getter is the identity at 100 %, and unload restores the prototypes.
+   */
+  var geometryShimRestore = null;
+  var pointerCoordinatesAreVisual = null;
+
+  /**
+   * Escape hatch: set this key to "1" in the DevTools console and reload to run
+   * the zoom without the geometry shim (for diagnosing an unrelated regression):
+   *   localStorage.setItem('dsh-plugin-zoom:no-geometry-shim', '1')
+   * and remove it with `removeItem` to turn the shim back on.
+   */
+  var SHIM_OPT_OUT_KEY = 'dsh-plugin-zoom:no-geometry-shim';
+
+  function geometryShimDisabled() {
+    try {
+      return window.localStorage.getItem(SHIM_OPT_OUT_KEY) === '1';
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /** The zoom applied to the document, as a layout→visual multiplier. */
+  function layoutFactor() {
+    return currentScale === DEFAULT_SCALE ? 1 : currentScale / 100;
+  }
+
+  function rectContainsPoint(rect, x, y) {
+    return x >= rect.left - 2 && x <= rect.right + 2 && y >= rect.top - 2 && y <= rect.bottom + 2;
+  }
+
+  function installZoomGeometryShim() {
+    if (geometryShimRestore !== null) return;
+    if (geometryShimDisabled()) return;
+    if (typeof Element === 'undefined' || typeof MouseEvent === 'undefined') return;
+    var restores = [];
+    var originalRect = Element.prototype.getBoundingClientRect;
+
+    Element.prototype.getBoundingClientRect = function () {
+      var rect = originalRect.call(this);
+      var factor = layoutFactor();
+      if (factor === 1) return rect;
+      return new DOMRect(rect.x / factor, rect.y / factor, rect.width / factor, rect.height / factor);
+    };
+    restores.push(function () {
+      Element.prototype.getBoundingClientRect = originalRect;
+    });
+
+    function patchWindowDimension(name) {
+      var owner = window;
+      var descriptor = null;
+      while (owner !== null) {
+        descriptor = Object.getOwnPropertyDescriptor(owner, name);
+        if (descriptor !== undefined) break;
+        owner = Object.getPrototypeOf(owner);
+      }
+      if (descriptor === undefined || typeof descriptor.get !== 'function') return;
+      var nativeGetter = descriptor.get;
+      var ownDescriptor = owner === window ? descriptor : null;
+      try {
+        Object.defineProperty(window, name, {
+          configurable: true,
+          enumerable: descriptor.enumerable === true,
+          get: function () {
+            var value = nativeGetter.call(window);
+            var factor = layoutFactor();
+            return factor === 1 ? value : Math.round(value / factor);
+          }
+        });
+      } catch (error) {
+        return;
+      }
+      restores.push(function () {
+        try {
+          if (ownDescriptor !== null) Object.defineProperty(window, name, ownDescriptor);
+          else delete window[name];
+        } catch (error) {
+          // A fresh page realm restores everything on reload anyway.
+        }
+      });
+    }
+    patchWindowDimension('innerWidth');
+    patchWindowDimension('innerHeight');
+
+    function patchPointerCoordinate(name) {
+      var descriptor = Object.getOwnPropertyDescriptor(MouseEvent.prototype, name);
+      if (descriptor === undefined || typeof descriptor.get !== 'function') return;
+      var nativeGetter = descriptor.get;
+      try {
+        Object.defineProperty(MouseEvent.prototype, name, {
+          configurable: true,
+          enumerable: descriptor.enumerable === true,
+          get: function () {
+            var value = nativeGetter.call(this);
+            var factor = layoutFactor();
+            if (factor === 1 || pointerCoordinatesAreVisual !== true) return value;
+            return value / factor;
+          }
+        });
+      } catch (error) {
+        return;
+      }
+      restores.push(function () {
+        Object.defineProperty(MouseEvent.prototype, name, descriptor);
+      });
+    }
+    patchPointerCoordinate('clientX');
+    patchPointerCoordinate('clientY');
+
+    // Learn once whether this Chromium reports pointer coordinates in visual
+    // pixels. A mouse event only falls inside the target's native (visual) rect
+    // or the shimmed (layout) rect, never both, for targets away from the
+    // origin, so this converges after a few events.
+    function detectPointerSpace(event) {
+      if (pointerCoordinatesAreVisual !== null) return;
+      var target = event.target;
+      if (target === null || target === undefined || typeof target.getBoundingClientRect !== 'function') return;
+      var visualRect = originalRect.call(target);
+      var layoutRect = target.getBoundingClientRect();
+      var inVisual = rectContainsPoint(visualRect, event.clientX, event.clientY);
+      var inLayout = rectContainsPoint(layoutRect, event.clientX, event.clientY);
+      if (inVisual && !inLayout) pointerCoordinatesAreVisual = true;
+      else if (inLayout && !inVisual) pointerCoordinatesAreVisual = false;
+    }
+    window.addEventListener('pointermove', detectPointerSpace, true);
+    window.addEventListener('pointerdown', detectPointerSpace, true);
+    restores.push(function () {
+      window.removeEventListener('pointermove', detectPointerSpace, true);
+      window.removeEventListener('pointerdown', detectPointerSpace, true);
+    });
+
+    geometryShimRestore = function () {
+      for (var index = restores.length - 1; index >= 0; index -= 1) {
+        try {
+          restores[index]();
+        } catch (error) {
+          // Best effort; a reload restores the realm.
+        }
+      }
+      geometryShimRestore = null;
+    };
+  }
+
+  function uninstallZoomGeometryShim() {
+    if (geometryShimRestore !== null) geometryShimRestore();
+  }
+
+  //#endregion
+
   //#region document scale ---------------------------------------------------
 
   /**
@@ -581,9 +756,10 @@
 
   //#endregion
 
-  // Apply the stored preference as early as this artifact materializes, before
-  // the shell's first React mount, so the app is never painted at the wrong
-  // scale and then corrected.
+  // Install the geometry shim as early as this artifact materializes, then
+  // apply the stored preference before the shell's first React mount, so the app
+  // is never painted at the wrong scale and then corrected.
+  installZoomGeometryShim();
   applyDocumentScale(currentScale);
 
   if (typeof window !== 'undefined' && window.__ModuleLoader__ && typeof window.__ModuleLoader__.load === 'function') {
@@ -601,6 +777,13 @@
            */
           apply: function (ctx) {
             localeFace = ctx.locale;
+
+            // Keep JS-visible geometry in the coordinate space CSS uses while
+            // the document is zoomed (see the shim region above).
+            ctx.effect(function () {
+              installZoomGeometryShim();
+              return uninstallZoomGeometryShim;
+            }, PLUGIN_ID + ': zoom geometry shim');
 
             ctx.effect(function () {
               applyDocumentScale(getScale());
@@ -664,5 +847,10 @@
     });
   }
 })();
+
+
+
+
+
 
 

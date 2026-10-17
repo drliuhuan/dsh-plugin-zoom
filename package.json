@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-zoom",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DeepSeek Harness Web UI plugin: manually zoom the whole interface on high-DPI displays, with Ctrl+wheel and Session-header controls.",
   "type": "module",
   "license": "MIT",

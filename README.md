@@ -49,6 +49,29 @@ users, too large) for comfortable reading. The operating-system setting also
 affects every application. This plugin zooms only the Harness Web UI, by a value
 you pick, and remembers it.
 
+## Fixed in 0.1.2: tooltips and menus drifting once zoomed
+
+A CSS `zoom` on the document root makes Chromium report
+`getBoundingClientRect()` and `window.innerWidth`/`innerHeight` in *visual*
+(already zoomed) pixels, while `position: fixed` descendants are zoomed a
+second time. The host UI positions its tooltips, hover cards and menus from
+exactly those values, so they drifted away from their anchor by
+(scale − 1) × distance from the top-left corner — the bug reported against
+0.1.1. 0.1.2 installs a geometry-space shim that converts those reads back to
+the layout pixels CSS uses (and, after a one-time auto-detection, pointer
+`clientX`/`clientY` too), so the host's own positioning, drag and hit-test math
+behaves exactly as it does at 100 %. The shim is the identity at 100 % and
+unload restores the prototypes. React DevTools fixed the same browser behavior
+in [facebook/react#37519](https://github.com/facebook/react/pull/37519).
+
+Escape hatch if you need to compare against the uncompensated behavior (browser
+DevTools console; takes effect after a reload):
+
+```js
+localStorage.setItem('dsh-plugin-zoom:no-geometry-shim', '1');
+// localStorage.removeItem('dsh-plugin-zoom:no-geometry-shim');
+```
+
 ## Notes and limits
 
 - The zoom is remembered in the browser through a cookie (host-scoped, so it
@@ -82,7 +105,7 @@ you pick, and remembers it.
 Install from npm through the DSH plugin manager:
 
 ```
-plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.1
+plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.2
 ```
 
 Or install from a local checkout (a directory install links the checkout, which
