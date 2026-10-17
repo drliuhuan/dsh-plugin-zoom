@@ -1,0 +1,71 @@
+{
+  "name": "dsh-plugin-zoom",
+  "version": "0.1.1",
+  "description": "DeepSeek Harness Web UI plugin: manually zoom the whole interface on high-DPI displays, with Ctrl+wheel and Session-header controls.",
+  "type": "module",
+  "license": "MIT",
+  "author": {
+    "name": "drliuhuan",
+    "email": "drliuhuan@outlook.com",
+    "url": "https://github.com/drliuhuan"
+  },
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "check": "node --check client.js && node --check index.js"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "zoom",
+    "dpi",
+    "scale",
+    "accessibility",
+    "high-dpi"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/drliuhuan/dsh-plugin-zoom.git"
+  },
+  "homepage": "https://github.com/drliuhuan/dsh-plugin-zoom#readme",
+  "bugs": {
+    "url": "https://github.com/drliuhuan/dsh-plugin-zoom/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings-general"
+      ]
+    }
+  }
+}

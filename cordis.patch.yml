@@ -1,0 +1,9 @@
+# Adds only this plugin's own row; it replaces no official DSH component.
+#
+# The row's `name` must stay equal to the package name: the client module system
+# resolves a package's browser artifact from its Loader entry name.
+- insert:
+    - id: zoom
+      name: dsh-plugin-zoom
+
+

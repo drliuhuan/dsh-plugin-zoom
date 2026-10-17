@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-label="Interface zoom">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071b30"/>
+      <stop offset="1" stop-color="#0f4f72"/>
+    </linearGradient>
+  </defs>
+
+  <rect x="5" y="5" width="118" height="118" rx="26" fill="url(#bg)"/>
+
+  <!-- Monitor: the surface whose content is scaled. -->
+  <rect x="18" y="26" width="86" height="54" rx="9" fill="#0a2942" stroke="#5fd2ff" stroke-width="3"/>
+  <path d="M56 80v12M42 96h34" fill="none" stroke="#5fd2ff" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Letter A: the text whose rendered size the scale changes. -->
+  <path d="M40 70l12-34 12 34M46 58h12" fill="none" stroke="#a6ecff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Magnifier with a plus: the manual scaling control. -->
+  <circle cx="90" cy="68" r="17" fill="#ffcf5c" fill-opacity="0.12" stroke="#ffcf5c" stroke-width="5"/>
+  <path d="M102 80l11 11" fill="none" stroke="#ffcf5c" stroke-width="6" stroke-linecap="round"/>
+  <path d="M83 68h14M90 61v14" fill="none" stroke="#ffcf5c" stroke-width="4" stroke-linecap="round"/>
+</svg>
+
