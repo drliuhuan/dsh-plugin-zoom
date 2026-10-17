@@ -105,7 +105,7 @@ localStorage.setItem('dsh-plugin-zoom:no-geometry-shim', '1');
 Install from npm through the DSH plugin manager:
 
 ```
-plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.2
+plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.3
 ```
 
 Or install from a local checkout (a directory install links the checkout, which
@@ -134,7 +134,7 @@ Run `npm run check` before committing.
 `.github/workflows/publish.yml` publishes through **npm trusted publishing
 (OIDC)**. Configure this repository (workflow `publish.yml`, environment
 `npm`) as a trusted publisher on npmjs.com, then publish a GitHub release whose
-tag equals the `package.json` version (for example `v0.1.1`). The workflow
+tag equals the `package.json` version (for example `v0.1.3`). The workflow
 checks that the tag matches, validates the packed files, and publishes with
 provenance.
 

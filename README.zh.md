@@ -87,7 +87,7 @@ localStorage.setItem('dsh-plugin-zoom:no-geometry-shim', '1');
 通过 DSH 插件管理器从 npm 安装：
 
 ```
-plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.2
+plugin_manager action=install_bundle target=dsh-plugin-zoom@0.1.3
 ```
 
 或从本地目录安装（目录安装会链接源码，便于开发）：
@@ -113,7 +113,7 @@ plugin_manager action=install_bundle target=D:\path\to\dsh-plugin-zoom
 
 `.github/workflows/publish.yml` 通过 **npm trusted publishing（OIDC）** 发布。先在 npmjs.com
 把本仓库（workflow `publish.yml`）配置成 trusted publisher，然后创建一个与 `package.json`
-版本号一致的 GitHub Release（例如 `v0.1.1`）；workflow 会校验 tag、检查打包文件，并带
+版本号一致的 GitHub Release（例如 `v0.1.3`）；workflow 会校验 tag、检查打包文件，并带
 provenance 发布。
 
 ## 许可证
